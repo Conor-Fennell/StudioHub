@@ -1,8 +1,7 @@
 from __future__ import print_function
 import os, io #accessing files and directories
 import tkinter as tk
-from tkinter import filedialog #Using this for windows explorer popup
-#import kivy #Using kivy to design the GUI 
+from tkinter import filedialog #Using this for windows explorer popup 
 import shutil #Used for zip archiving/extracting
 import stat #Used to remove read_only off hidden files
 import pickle #serialising auth data 
@@ -64,19 +63,22 @@ def toDrive(file_name, file_path, folder_id, service, onerror=remove_readonly):
         print("File could not be uploaded")
 
 
+
 #This function pulls a file from google drive onto the pc
 #it takes in the file_id of the file you wish to download
 #it returns the file name of the downloaded file
 def fromDrive(file_id, service, onerror=remove_readonly):
+    print("fromDrive id received:", file_id)
     request = service.files().get_media(fileId=file_id) #request download file
     #print(request.get('name')) #HERE
-    fh = io.BytesIO() #specify to download as bytes
+    fh = io.BytesIO() #specify to download as bytes     
     downloader = MediaIoBaseDownload(fh, request)
     done = False
     while done is False: #loops until whole file is downloaded
-        status, done = downloader.next_chunk() #downloads in chunks and displays progress
+        status, done = downloader.next_chunk() #downloads in chunks and displays progress HERE
         print("Download %d%%." % int(status.progress() * 100))
-    file_name = input("Save file as: ") #save the file, what name will it have?
+    file = service.files().get(fileId=file_id).execute() #get file metadata
+    file_name = file.get('name') #get the name from the metadata
     file_path = file_name+".zip" #We are going to download it to the StudioHub directory
     with io.open(file_path,'wb') as file: #open a new file in write binary mode
         fh.seek(0) #start writing form the 0th bit in the file (whole file)
@@ -84,6 +86,7 @@ def fromDrive(file_id, service, onerror=remove_readonly):
         print("File written to", file_path)
     #return the full file path including the file name and return the file path without the name
     return file_name
+
 
 #This opens a win explorer popup to select folder for upload
 #returns the file path we selected
@@ -98,15 +101,8 @@ def selectFolder(onerror=remove_readonly):
             print(file_path) #printing the folders file path
             return file_path
         else: #they closed window without selecting a file
-            ans = input("No file selected, would you like to select a file? y/n: ")
-            if (ans == 'n'):
-                select = False
-                return None #They didn't wanna push a file so return None
-            if (ans == 'y'): #loops again
-                pass
-            else:
-                print("Invalid answer") #loops again 
-                pass 
+            return None
+
 
 #Popup window asks which file you would like to compress
 #It compresses the file into a zip file
@@ -160,10 +156,12 @@ def upload(service, file_name, folder_id, onerror=remove_readonly):
 
 #Pass in the file_id of a file and retrive the file
 def download(file_id, service):
+    print("download: ",file_id)
     file_name = fromDrive(file_id,service) #download file from drive
     unzip(file_name) #unzip the file we downloaded
     os.remove(file_name+".zip") #delete the zipped file we downloaded
     #leaving only the unzipped version
+    return None
 
 #Deletes a file or a project, pass service, file/project id and parent folder id
 #if deleting a project, pass in service, project_id
@@ -214,34 +212,20 @@ def listProjects(folder_id,service):
             # Process change
             project_name = file.get('name')
             project_id = file.get('id')
-            project_dict[project_name] = [project_id]
+            project_dict[project_name] = project_id
             print('Found:', project_name,':',project_id)
         page_token = response.get('nextPageToken', None)
         if page_token is None:
             break
     return project_dict
 
-def newProject(folder_id,service):
-    project_name = input("What is your new projects name?:")
+def newProject(folder_id, project_name, service):
     project_id = createFolder(service, project_name, folder_id)
     #response = input("Would you like to add a comment to the project? y/n: ")
     #if response == 'y':
         #insert_comment(service, project_id) #This feature doesn't work yet
     #else:
         #print("No comments added")
-    answered = False
-    while answered == False:
-        response = input("Would you like to push a file to this project? y/n: ")
-        if (response == 'y'):
-            upload(service, project_name, project_id)
-            answered = True
-        elif(response == 'n'):
-            print("No items pushed to", project_name)
-            answered = True
-        else:
-            print("The character entered was invalid, please try again...")
-            answered = False
-    print("\n")
     return project_id
 
 #Derived from google drive API documentation
@@ -261,6 +245,9 @@ def shareProject(service, folder_id, user_email):
     print("Project successfully shared with", user_email)
 
 def addContact(contact_name, contact_email, contacts, onerror=remove_readonly):
+    #if(contacts == None):
+       # contacts = {}
+
     contact_info = [contact_name, contact_email] #our new contact information
     if (not os.path.exists("contacts.csv")): #If file doesn't exist
         with open('contacts.csv', 'wb', newline='') as file: #wb mode creates the file
@@ -275,7 +262,7 @@ def addContact(contact_name, contact_email, contacts, onerror=remove_readonly):
             data.writerow(contact_info) #write new contact to file
         with open ("contacts.csv", "r", newline='') as file:
             data = csv.reader(file) #open file in reader mode
-            contacts[contact_name] = [contact_email] #add new entry to dictionary
+            contacts[contact_name] = contact_email #add new entry to dictionary
     #We didn't add new contacts, so this is the first time we've opened the file 
     # So we must create the dicitonary from scratch and not just append it       
     if(contacts == None):
@@ -288,23 +275,22 @@ def addContact(contact_name, contact_email, contacts, onerror=remove_readonly):
                 if (i == 0):
                     i = i+1
                 else: #iterate through contacts, adding them to dictonary and printing them
-                    contacts[row[0]] = {'email':row[1]} #contacts['name']['email'] returns email address
+                    contacts[row[0]] = row[1] #contacts['name']['email'] returns email address
                     print("Name:",row[0],contacts[row[0]])
     return contacts #return the dictionary
 
 def main():
 #======================================Setup=================================================================    
-    creds = None
-    service = GoogleAuth(creds) #authenticate user, make sure permissions are accepted
-    exists, folder_id = searchFile(service,'StudioHub') #Check if folder exists and get its id
-    if (exists == 0): #if we have not created a google drive StudioHub folder
-        print("No folder named StudioHub existed, creating new one")
-        folder_id = createFolder(service, 'StudioHub', None) #Get folder_id of new folder created
-    else: #We have already created StudioHub folder, its id is the one from searchFile function
-        print("StudioHub folder already exists") 
-    #creates dictionary containing all contacts
-    contacts = addContact(None, None, None)
-
+#    creds = None
+#    service = GoogleAuth(creds) #authenticate user, make sure permissions are accepted
+#    exists, folder_id = searchFile(service,'StudioHub') #Check if folder exists and get its id
+#    if (exists == 0): #if we have not created a google drive StudioHub folder
+#        print("No folder named StudioHub existed, creating new one")
+#        folder_id = createFolder(service, 'StudioHub', None) #Get folder_id of new folder created
+#    else: #We have already created StudioHub folder, its id is the one from searchFile function
+#        print("StudioHub folder already exists") 
+#    #creates dictionary containing all contacts
+#    contacts = addContact(None, None, None)
 #=============================================================================================================
     #print(contacts['Conor']['email'])
     #appends the csv file and the contacts dictionary with new contact
@@ -347,6 +333,6 @@ def main():
     #project_dict = listProjects(folder_id,service)
     #for projects in project_dict:
         #print(projects, ':',project_dict[projects])
- 
+    pass
 if __name__ == "__main__":
     main()
