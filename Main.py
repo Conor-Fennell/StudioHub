@@ -21,68 +21,6 @@ if (exists == 0): #if we have not created a google drive StudioHub folder
 else: #We have already created StudioHub folder, its id is the one from searchFile function
         print("StudioHub folder already exists") 
 
-class ProjectWidget(QWidget):
-    def __init__(self, name, project_id):
-        super(ProjectWidget, self).__init__()
-        self.name = name
-        self.project_id = project_id
-        self.is_on = False
-
-        self.lbl = QLabel(self.name)
-        self.btn_upload = QPushButton("Upload to Project")
-        self.btn_download = QPushButton("View Project")
-        self.btn_collab = QPushButton("Make Collaborative")
-
-        self.hbox = QHBoxLayout()
-        
-        self.hbox.addWidget(self.lbl)
-        self.hbox.addWidget(self.btn_upload)
-        self.hbox.addWidget(self.btn_download)
-        self.hbox.addWidget(self.btn_collab)
-
-        self.btn_upload.clicked.connect(self.uploadToProj)
-        self.btn_download.clicked.connect(self.viewProj)
-        self.btn_collab.clicked.connect(self.collaborateProj)
-        
-        self.setLayout(self.hbox)
-
-    def show(self):
-
-        for w in [self, self.lbl, self.btn_upload, self.btn_download, self.btn_collab]:
-            w.setVisible(True)
-
-    def hide(self):
-
-        for w in [self, self.lbl, self.btn_upload, self.btn_download, self.btn_collab]:
-            w.setVisible(False)
-            
-    def uploadToProj(self):
-        print(self.name, "id is",self.project_id)
-        loop = True #reacurring loop if we keep cancelling uploads and then say we want to upload
-        while (loop == True):
-            file_uploaded = s.upload(service, self.name, self.project_id)
-            if(file_uploaded == None):
-                q_box = QtWidgets.QMessageBox #create a message box asking do you want to upload to the project
-                response = q_box.question(self,'', "You did not select a file. Continue with upload?", q_box.Yes | q_box.No)
-                if (response != q_box.Yes): 
-                    loop = False
-            else: #This means we uploaded a file successfully
-                loop = False
-
-    def viewProj(self, project_id):
-        print("id is",self.project_id)
-        self.thisProj_dict = s.listProjects(self.project_id, service)
-        self.FileWin = FilesWindow(self.project_id) 
-        #pass the project_id and assign self.FileWin to next window
-        self.FileWin.show() #show the file window
-        w.hide() #hide project window
-        #here we need to switch to other window
- 
-    def collaborateProj(self):
-        print("collab")
-        #s.shareProject(service, folder_id, user_email)
-        pass
-
 #Main window that opens when we start the program, 
 #has all the projects and contacts button, create project etc
 class ProjectsWindow(QMainWindow):
@@ -167,15 +105,31 @@ class ProjectsWindow(QMainWindow):
             project_name = str(text) #project name is string of inputted text
             project_id = s.newProject(folder_id, project_name, service) #make a new project with that name
             #dont need to update dictionary as its updated when the window refreshes
-            q_box = QtWidgets.QMessageBox #create a message box asking do you want to upload to the project
-            response = q_box.question(self,'', "Would you like to upload a file to this project?", q_box.Yes | q_box.No)
-            if (response == q_box.Yes): #if you want to upload, do this
-                s.upload(service, project_name, project_id)
+            q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
+            q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+            q_box.setWindowTitle("Upload to Project")
+            q_box.setText("Would you like to upload a file to this project?")
+            q_box.exec_()
+            if (q_box.result() == QtWidgets.QMessageBox.Yes):
+                loop = True #reacurring loop if we keep cancelling uploads and then say we want to upload
+                while (loop == True):
+                    file_uploaded = s.upload(service, project_name, project_id)
+                    if(file_uploaded == None):
+                        q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
+                        q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+                        q_box.setWindowTitle("Upload to Project")
+                        q_box.setText("No file was uploaded, do you want to try again?")
+                        q_box.exec_()
+                        if (q_box.result() != QtWidgets.QMessageBox.Yes):
+                            loop = False
+                    else: #This means we uploaded a file successfully
+                        loop = False
         #refresh window
         self.ProjWin = ProjectsWindow() #project dictionary is updated when window is initialised again
         self.ProjWin.update()#updates the window so the new projects are shown
         self.ProjWin.show() #show the window 
         self.hide() #hide current window
+
 
     def projView(self):
         print("This is already the current window")
@@ -185,6 +139,97 @@ class ProjectsWindow(QMainWindow):
         self.contView.show()
         self.hide()
         #this will to take us to scrollable contacts view
+
+
+class ProjectWidget(QWidget): 
+    def __init__(self, name, project_id):
+        super(ProjectWidget, self).__init__()
+
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.name = name
+        self.project_id = project_id
+        self.proj = [self.name, self.project_id]
+        self.is_on = False
+
+        self.lbl = QLabel(self.name)
+        self.btn_upload = QPushButton("Upload to Project")
+        self.btn_download = QPushButton("View Project")
+        self.btn_collab = QPushButton("Make Collaborative")
+
+        self.hbox = QHBoxLayout()
+        
+        self.hbox.addWidget(self.lbl)
+        self.hbox.addWidget(self.btn_upload)
+        self.hbox.addWidget(self.btn_download)
+        self.hbox.addWidget(self.btn_collab)
+
+        self.btn_upload.clicked.connect(self.uploadToProj)
+        self.btn_download.clicked.connect(self.viewProj)
+        self.btn_collab.clicked.connect(self.collaborateProj)
+        
+        self.setLayout(self.hbox)
+
+    def show(self):
+
+        for w in [self, self.lbl, self.btn_upload, self.btn_download, self.btn_collab]:
+            w.setVisible(True)
+
+    def hide(self):
+
+        for w in [self, self.lbl, self.btn_upload, self.btn_download, self.btn_collab]:
+            w.setVisible(False)
+            
+    def uploadToProj(self):
+        print(self.name, "id is",self.project_id)
+        loop = True #reacurring loop if we keep cancelling uploads and then say we want to upload
+        while (loop == True):
+            file_uploaded = s.upload(service, self.name, self.project_id)
+            if(file_uploaded == None):
+                q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
+                q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+                q_box.setWindowTitle("Upload to Project")
+                q_box.setText("No file was uploaded, do you want to try again?")
+                q_box.exec_()
+                if (q_box.result() != QtWidgets.QMessageBox.Yes):
+                    loop = False
+            else: #This means we uploaded a file successfully
+                msg_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
+                msg_box.setWindowTitle("Upload Successful")
+                msg_box.setText("File uploaded to "+self.name)
+                msg_box.exec_()
+                loop = False
+
+    def viewProj(self, name):
+        print("id is",self.project_id)
+        w.hide() #only works first time around
+        self.FilesWindow = FilesWindow(self.project_id)
+        self.FilesWindow.show()
+        #here we need to switch to other window
+
+    def collaborateProj(self):
+        contacts = s.addContact(None, None, None) 
+        contact_selected, ok = QInputDialog.getItem(self, "Collaborate on Project","Contacts", contacts, 0, False)
+        if ok and contact_selected:
+            user_email = contacts[contact_selected]
+            try:
+                s.shareProject(service, self.project_id, user_email)
+                message = "Project shared with "+contact_selected+": "+contacts[contact_selected]
+                print(message)
+                msg = QMessageBox()
+                msg.setText(message)
+                msg.setWindowTitle("Shared Project")
+                msg.setIcon(QMessageBox.Information)
+                msg.exec_()
+            except:
+                message = "Unable to share project with "+(user_email)
+                msg = QMessageBox()
+                msg.setText(message)
+                msg.setWindowTitle("Share Project Error")
+                message = "Please ensure "+user_email+" is a valid email address"
+                msg.setInformativeText(message)
+                msg.setIcon(QMessageBox.Warning)
+                msg.exec_()
+            
 
 #viewing the files inside an indiviual project
 class viewWidget(QWidget):
@@ -218,17 +263,35 @@ class viewWidget(QWidget):
             w.setVisible(False)
             
     def down(self, fileProj_id):
-        print("Downloading file with id:",self.fileProj_id[0])
-        s.download(self.fileProj_id[0], service) #download the file from the drive
+        loop = True
+        while loop == True:
+            print("Downloading file with id:",self.fileProj_id[0])
+            success = s.download(self.fileProj_id[0], service) #download the file from the drive
+            if success:
+                return loop == False
+            else:
+                q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to delete file
+                q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+                q_box.setWindowTitle("Download Failed")
+                q_box.setText("Would you like to try and download the file again?")
+                q_box.exec_()
+                if (q_box.result() != QtWidgets.QMessageBox.Yes):#if response is not yes, breaks the loop
+                    cancel_dialog = QtWidgets.QMessageBox() #let user know they cancelled the download
+                    cancel_dialog.setText("The file was not downloaded")
+                    cancel_dialog.setWindowTitle("Download Cancelled")
+                    cancel_dialog.exec_() #show the message box
+                    return loop == False #breaks loop
 
     def delete(self, fileProj_id): 
         try:
-            qm = QtWidgets.QMessageBox #Message box asks if you want to delete the file
-            response = qm.question(self,'', "Are you sure you want to delete this file?", qm.Yes| qm.No)
-            if response == qm.Yes: #if response is yes, deletes the file
+            q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to delete file
+            q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+            q_box.setWindowTitle("Delete File")
+            q_box.setText("Are you sure you would like to delete this file?")
+            q_box.exec_()
+            if (q_box.result() == QtWidgets.QMessageBox.Yes):#if response is yes, deletes the file
                 s.delete(service, self.fileProj_id[0])
-                self.FileWin = FilesWindow(self.fileProj_id[1]) #fileProj_id[1] = project_id
-                self.FileWin.hide() #updates the window so the deleted file is not shown anymore
+                #hide the deleted widget
                 self.hide()
             else:
                 print("User chose not to delete", self.name)
@@ -327,10 +390,25 @@ class FilesWindow(QMainWindow):
             project_id = s.newProject(folder_id, project_name, service) #make a new project with that name
             project_dict = s.listProjects(folder_id,service)
             project_dict[project_name] = project_id #add this project to the dictionary
-            q_box = QtWidgets.QMessageBox #create a message box asking do you want to upload to the project
-            response = q_box.question(self,'', "Would you like to upload a file to this project?", q_box.Yes | q_box.No)
-            if (response == q_box.Yes): #if you want to upload, do this
-                s.upload(service, project_name, project_id)
+            q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
+            q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+            q_box.setWindowTitle("Upload to Project")
+            q_box.setText("Would you like to upload a file to this project?")
+            q_box.exec_()
+            if (q_box.result() == QtWidgets.QMessageBox.Yes):
+                loop = True #reacurring loop if we keep cancelling uploads and then say we want to upload
+                while (loop == True):
+                    file_uploaded = s.upload(service, project_name, project_id)
+                    if(file_uploaded == None):
+                        q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
+                        q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+                        q_box.setWindowTitle("Upload to Project")
+                        q_box.setText("No file was uploaded, do you want to try again?")
+                        q_box.exec_()
+                        if (q_box.result() != QtWidgets.QMessageBox.Yes):
+                            loop = False
+                    else: #This means we uploaded a file successfully
+                        loop = False
 
     def projView(self):
         self.ProjWin = ProjectsWindow() 
@@ -377,13 +455,42 @@ class contactsWidget(QWidget):
         for w in [self, self.lbl_name,self.lbl_email, self.btn_share, self.btn_delete]:
             w.setVisible(False)
             
-    def share(self, file_id):
-        print("Share contact button pressed")
-        pass
+    def share(self, user_email):
+        project_dict = s.listProjects(folder_id,service)
+        project_name, ok = QInputDialog.getItem(self, "Collaborate","Select a project to share", project_dict, 0, False)
+        if ok and project_name:
+            project_id = project_dict[project_name]
+            print(project_id)
+            print(self.user_email)
+            try:
+                s.shareProject(service, project_id, self.user_email)
+                message = "Project shared with "+(self.user_email)
+                msg = QMessageBox()
+                msg.setText(message)
+                msg.setWindowTitle("Shared Project")
+                msg.setIcon(QMessageBox.Information)
+                msg.exec_()
+            except:
+                message = "Unable to share project with "+(self.user_email)
+                msg = QMessageBox()
+                msg.setText(message)
+                msg.setWindowTitle("Share Project Error")
+                message = "Please ensure "+self.user_email+" is a valid email address"
+                msg.setInformativeText(message)
+                msg.setIcon(QMessageBox.Warning)
+                msg.exec_()
+
 
     def delete(self, user_email): 
-        print("Delete contact button pressed")
-        pass
+        s.deleteContact(self.user_email)
+        message = "Deleted "+self.user_email+" from contacts"
+        msg = QMessageBox()
+        msg.setText(message)
+        msg.setWindowTitle("Deleted Contact")
+        msg.setIcon(QMessageBox.Information)
+        msg.exec_()
+        self.hide()
+       
   
 #Window when we view contacts
 class ContactsWindow(QMainWindow): 
@@ -469,10 +576,25 @@ class ContactsWindow(QMainWindow):
             project_id = s.newProject(folder_id, project_name, service) #make a new project with that name
             project_dict = s.listProjects(folder_id,service)
             project_dict[project_name] = project_id #add this project to the dictionary
-            q_box = QtWidgets.QMessageBox #create a message box asking do you want to upload to the project
-            response = q_box.question(self,'', "Would you like to upload a file to this project?", q_box.Yes | q_box.No)
-            if (response == q_box.Yes): #if you want to upload, do this
-                s.upload(service, project_name, project_id)
+            q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
+            q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+            q_box.setWindowTitle("New Project")
+            q_box.setText("Would you like to upload a file to this project?")
+            q_box.exec_()
+            if (q_box.result() == QtWidgets.QMessageBox.Yes):
+                loop = True #reacurring loop if we keep cancelling uploads and then say we want to upload
+                while (loop == True):
+                    file_uploaded = s.upload(service, project_name, project_id)
+                    if(file_uploaded == None):
+                        q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
+                        q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+                        q_box.setWindowTitle("Upload to Project")
+                        q_box.setText("No file was uploaded, do you want to try again?")
+                        q_box.exec_()
+                        if (q_box.result() != QtWidgets.QMessageBox.Yes):
+                            loop = False
+                    else: #This means we uploaded a file successfully
+                        loop = False
 
     def projView(self):
         self.ProjWin = ProjectsWindow() 
@@ -498,3 +620,4 @@ app = QApplication(sys.argv)
 w = ProjectsWindow()
 w.show()
 sys.exit(app.exec_())
+

@@ -1,5 +1,5 @@
 from __future__ import print_function
-import os, io #accessing files and directories
+import os, io, sys #accessing files and directories
 import tkinter as tk
 from tkinter import filedialog #Using this for windows explorer popup 
 import shutil #Used for zip archiving/extracting
@@ -12,6 +12,11 @@ from googleapiclient.discovery import build #google drive api
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
+
+import PyQt5
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QObject
+from PyQt5.QtWidgets import QProgressBar, QProgressDialog, QPushButton, QDialog, QMessageBox, QVBoxLayout
 
 # If modifying these scopes, delete the file token.pickle.
 #level of access we are requesting (full access)
@@ -50,33 +55,32 @@ def GoogleAuth(creds):
 def toDrive(file_name, file_path, folder_id, service, onerror=remove_readonly):
     try:
         file_metadata = {'name': file_name, 'parents': [folder_id]} #Metadata for the file we are going to upload
-        media = MediaFileUpload(file_path, mimetype='application/zip', resumable=True)
+        media = MediaFileUpload(file_path, mimetype='application/zip', resumable=True)  
         #Resumable is true which means that if connections cuts off it will continue uploading again when coneection is established
         #This is important as we may be uploading large projects which may be interrupted by a bad connection
-        print("Uploading", file_name, "...")
+        progress = QtWidgets.QDialog() #letting you know its uploading
+        progress.setWindowTitle("Uploading...")
+        progress.setFixedSize(200,60)
+        progress.show()
         file = service.files().create(body=file_metadata, media_body=media, fields='id').execute() #upload file
+        progress.hide()
         file_id = ('File ID: %s' % file.get('id'))
-        print("File successfully uploaded.", file_id)
         file_id = file.get('id')
         return file_id #returns the google drive id of the file uploaded
     except: 
         print("File could not be uploaded")
 
-
-
 #This function pulls a file from google drive onto the pc
 #it takes in the file_id of the file you wish to download
 #it returns the file name of the downloaded file
 def fromDrive(file_id, service, onerror=remove_readonly):
-    print("fromDrive id received:", file_id)
+    print("from Drive id received:", file_id)
     request = service.files().get_media(fileId=file_id) #request download file
-    #print(request.get('name')) #HERE
     fh = io.BytesIO() #specify to download as bytes     
     downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while done is False: #loops until whole file is downloaded
-        status, done = downloader.next_chunk() #downloads in chunks and displays progress HERE
-        print("Download %d%%." % int(status.progress() * 100))
+    progress = progressBar(downloader) #create instance off progress bar class
+    progress.exec_() #execute it
+    progress.hide() #hide it off the screen after
     file = service.files().get(fileId=file_id).execute() #get file metadata
     file_name = file.get('name') #get the name from the metadata
     file_path = file_name+".zip" #We are going to download it to the StudioHub directory
@@ -86,7 +90,6 @@ def fromDrive(file_id, service, onerror=remove_readonly):
         print("File written to", file_path)
     #return the full file path including the file name and return the file path without the name
     return file_name
-
 
 #This opens a win explorer popup to select folder for upload
 #returns the file path we selected
@@ -103,12 +106,11 @@ def selectFolder(onerror=remove_readonly):
         else: #they closed window without selecting a file
             return None
 
-
 #Popup window asks which file you would like to compress
 #It compresses the file into a zip file
-def zip(project_name, onerror=remove_readonly):
+def zip(project_name, file_path,onerror=remove_readonly):
     print("Select the file you wish to push to", project_name)
-    file_path = selectFolder() #opens up popup to select folder
+    #file_path = selectFolder() #opens up popup to select folder
     if(file_path): #If user selects a file
         file_name = os.path.basename(file_path) #file name without the rest of the file path
         print("Zipping", file_name, "and preparing it for upload")
@@ -119,11 +121,11 @@ def zip(project_name, onerror=remove_readonly):
         return None
 
 #Popup window asks which directory you would like to unzip the inputted file into
-def unzip(file_to_unzip, onerror=remove_readonly):
+def unzip(file_to_unzip, file_path, onerror=remove_readonly):
     print("Where would you like to save the file?")
     #We will be unzipping from the StudioHub directory and extracting to
     #wherever to user chooses to save the file
-    file_path = selectFolder() #where are we going to save the file?
+    #file_path = selectFolder() #where are we going to save the file?
     directory = file_path + '\ ' +file_to_unzip #New directory in the file path the user selected
     print("Extracting", file_to_unzip, "to", file_path)
     #extract(filename.zip, format is zip file, directory to extract to)
@@ -137,7 +139,8 @@ def upload(service, file_name, folder_id, onerror=remove_readonly):
     upload = True
     while upload == True:
         try:
-            file_name = zip(file_name) #lets you choose a file and then zips the file
+            file_path = selectFolder()
+            file_name = zip(file_name, file_path) #lets you choose a file and then zips the file
             if (file_name): #If zip returns a file name then user selected a file
                 print("File:", file_name, "Path:",file_name+".zip")
                 file_id = toDrive(file_name, file_name+".zip",folder_id, service) 
@@ -158,10 +161,15 @@ def upload(service, file_name, folder_id, onerror=remove_readonly):
 def download(file_id, service):
     print("download: ",file_id)
     file_name = fromDrive(file_id,service) #download file from drive
-    unzip(file_name) #unzip the file we downloaded
-    os.remove(file_name+".zip") #delete the zipped file we downloaded
+    try:
+        file_path = selectFolder()
+        unzip(file_name, file_path) #unzip the file we downloaded
+        os.remove(file_name+".zip") #delete the zipped file we downloaded
+        return 1 #return 1 for success
     #leaving only the unzipped version
-    return None
+    except:#if they didn't select a file
+        os.remove(file_name+".zip") #delete zip file 
+        return None #return and let them try again
 
 #Deletes a file or a project, pass service, file/project id and parent folder id
 #if deleting a project, pass in service, project_id
@@ -278,6 +286,65 @@ def addContact(contact_name, contact_email, contacts, onerror=remove_readonly):
                     contacts[row[0]] = row[1] #contacts['name']['email'] returns email address
                     print("Name:",row[0],contacts[row[0]])
     return contacts #return the dictionary
+
+
+def deleteContact(contact_email, onerror=remove_readonly):
+        lines = list() #empty list
+        with open("contacts.csv", "r", newline='') as readFile: #open csv file
+            reader = csv.reader(readFile)
+            for row in reader: #add all the data from the csv file into the list
+                lines.append(row)
+                for entry in row: #for every entry in the rows of the new list
+                    if entry == contact_email: #if an entry == contact email
+                        lines.remove(row) #remove that row (name,email)
+        with open("contacts.csv", "w", newline='') as writeFile: 
+            #Overwrite the csv file with all the data besides the deleted contact 
+            writer = csv.writer(writeFile)
+            writer.writerows(lines)
+
+
+class Thread(QThread):
+    signal= pyqtSignal(int)
+    def __init__(self, downloader):
+        super(Thread,self).__init__()
+        self.downloader = downloader
+
+    def run(self):
+        done = False
+        while done == False:
+            status, done = self.downloader.next_chunk()
+            value = int(status.progress() * 100)
+            print(value)
+            self.signal.emit(value)
+
+#define the progress bar class, this is the widget with the progress bar on it
+# ive it its dimensions and style etc and instantiate a new progress bar for it
+class progressBar(QDialog):
+    def __init__(self,downloader):
+        super().__init__()
+        self.downloader = downloader
+        self.title = "Downloading"
+        self.setWindowTitle(self.title)
+        self.setFixedSize(400,60)
+        vbox = QVBoxLayout()
+        self.progressbar = QProgressBar() #instansiate a progress bar
+        self.progressbar.setMaximum(100) #set its max value to 100 percent
+        self.progressbar.setStyleSheet("QProgressBar {border: 2px solid grey;border-radius:8px;padding:1px}")
+        vbox.addWidget(self.progressbar) #add it to the widget
+        self.startProgressBar()
+        self.setLayout(vbox)
+        self.show()
+ 
+    def startProgressBar(self):
+        self.thread = Thread(self.downloader) #open new thread with downloader object
+        self.thread.signal.connect(self.setProgressVal) 
+        #connect the signal from the download thread to update the progress bar
+        self.thread.start() #start the thread
+ 
+    def setProgressVal(self, value):
+        self.progressbar.setValue(value) #update the progress bar
+        if(value == 100): #if its value is 100
+            self.hide() #were finished so we can hide it
 
 def main():
 #======================================Setup=================================================================    
