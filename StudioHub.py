@@ -11,7 +11,7 @@ from apiclient import errors
 from googleapiclient.discovery import build #google drive api
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
+from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload, MediaIoBaseUpload
 
 import PyQt5
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -53,22 +53,19 @@ def GoogleAuth(creds):
 #It takes in the name of the file, its path, and the parent folder in google drive it should be uploaded under
 #it returns the file id of the file you downloaded
 def toDrive(file_name, file_path, folder_id, service, onerror=remove_readonly):
+    CHUNK_SIZE = 256 * 1024
     try:
         file_metadata = {'name': file_name, 'parents': [folder_id]} #Metadata for the file we are going to upload
-        media = MediaFileUpload(file_path, mimetype='application/zip', resumable=True)  
-        #Resumable is true which means that if connections cuts off it will continue uploading again when coneection is established
-        #This is important as we may be uploading large projects which may be interrupted by a bad connection
-        progress = QtWidgets.QDialog() #letting you know its uploading
-        progress.setWindowTitle("Uploading...")
-        progress.setFixedSize(200,60)
-        progress.show()
-        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute() #upload file
-        progress.hide()
-        file_id = ('File ID: %s' % file.get('id'))
-        file_id = file.get('id')
-        return file_id #returns the google drive id of the file uploaded
+        media = MediaFileUpload(file_path, mimetype='application/zip',chunksize=CHUNK_SIZE, resumable=True) 
+        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        #progress = progressBarUpload(file) #create instance off progress bar class
+        #progress.exec_() #execute it
+        #progress.hide() #hide it off the screen after
+        print(file_name + " uploaded successfully")
+        return 1 #returns 1 if it was successful
     except: 
         print("File could not be uploaded")
+        return None
 
 #This function pulls a file from google drive onto the pc
 #it takes in the file_id of the file you wish to download
@@ -78,7 +75,8 @@ def fromDrive(file_id, service, onerror=remove_readonly):
     request = service.files().get_media(fileId=file_id) #request download file
     fh = io.BytesIO() #specify to download as bytes     
     downloader = MediaIoBaseDownload(fh, request)
-    progress = progressBar(downloader) #create instance off progress bar class
+    print(downloader)
+    progress = progressBarDownload(downloader) #create instance off progress bar class
     progress.exec_() #execute it
     progress.hide() #hide it off the screen after
     file = service.files().get(fileId=file_id).execute() #get file metadata
@@ -143,18 +141,23 @@ def upload(service, file_name, folder_id, onerror=remove_readonly):
             file_name = zip(file_name, file_path) #lets you choose a file and then zips the file
             if (file_name): #If zip returns a file name then user selected a file
                 print("File:", file_name, "Path:",file_name+".zip")
-                file_id = toDrive(file_name, file_name+".zip",folder_id, service) 
+                file_uploaded = toDrive(file_name, file_name+".zip",folder_id, service) 
                 #uploads the zipped file to the drive
-                os.remove(file_name+".zip") #delete the zipped file we uplaoded
-                print("Zip file deleted")
-                upload = False #breaks loop as file was successfully uploaded
-                return file_id #returns the file id of the file we just uploaded
             else:
                 print("No file pushed to project")
                 return None
                 #If the user chose not to select a file print this message
         except: 
             print("File could not be uploaded, please try again")
+            #Will loop around again and let you upload a different file 
+        try:
+            print("removing"+file_name+".zip") 
+            os.remove(file_name+".zip") #delete the zipped file we uplaoded
+            print("Zip file deleted")
+            upload = False #breaks loop as file was successfully uploaded
+            return file_uploaded #returns 1 if file was uploaded and zip deleted successfully
+        except: 
+            print("Zip file could not be deleted")
             #Will loop around again and let you upload a different file  
 
 #Pass in the file_id of a file and retrive the file
@@ -303,23 +306,24 @@ def deleteContact(contact_email, onerror=remove_readonly):
             writer.writerows(lines)
 
 
-class Thread(QThread):
-    signal= pyqtSignal(int)
+class ThreadDownload(QThread):
+    signal = pyqtSignal(int)
     def __init__(self, downloader):
-        super(Thread,self).__init__()
+        super(ThreadDownload,self).__init__()
         self.downloader = downloader
 
     def run(self):
         done = False
         while done == False:
             status, done = self.downloader.next_chunk()
+            print("status->",status,"done->",done)
             value = int(status.progress() * 100)
-            print(value)
+            print("Downloaded",value,"%")
             self.signal.emit(value)
 
-#define the progress bar class, this is the widget with the progress bar on it
+#define the progress bar download class, this is the widget with the progress bar on it
 # ive it its dimensions and style etc and instantiate a new progress bar for it
-class progressBar(QDialog):
+class progressBarDownload(QDialog):
     def __init__(self,downloader):
         super().__init__()
         self.downloader = downloader
@@ -336,7 +340,52 @@ class progressBar(QDialog):
         self.show()
  
     def startProgressBar(self):
-        self.thread = Thread(self.downloader) #open new thread with downloader object
+        self.thread = ThreadDownload(self.downloader) #open new thread with downloader object
+        self.thread.signal.connect(self.setProgressVal) 
+        #connect the signal from the download thread to update the progress bar
+        self.thread.start() #start the thread
+ 
+    def setProgressVal(self, value):
+        self.progressbar.setValue(value) #update the progress bar
+        if(value == 100): #if its value is 100
+            self.hide() #were finished so we can hide it
+
+class ThreadUpload(QThread):
+    signal = pyqtSignal(int)
+    def __init__(self, file):
+        super(ThreadUpload,self).__init__()
+        self.file = file
+
+    def run(self):
+        done = False
+        while done == False:
+            status, done = self.file.next_chunk()
+            print("status->",status, "Done->",done, "object->", self.file.next_chunk())
+            if status:
+                value = int(status.progress() * 100)
+                print("Uplaoded",value,"%")
+                self.signal.emit(value)
+
+#define the progress bar upload class, this is the widget with the progress bar on it
+# ive it its dimensions and style etc and instantiate a new progress bar for it
+class progressBarUpload(QDialog):
+    def __init__(self,file):
+        super().__init__()
+        self.file = file
+        self.title = "Uploading"
+        self.setWindowTitle(self.title)
+        self.setFixedSize(400,60)
+        vbox = QVBoxLayout()
+        self.progressbar = QProgressBar() #instansiate a progress bar
+        self.progressbar.setMaximum(100) #set its max value to 100 percent
+        self.progressbar.setStyleSheet("QProgressBar {border: 2px solid grey;border-radius:8px;padding:1px}")
+        vbox.addWidget(self.progressbar) #add it to the widget
+        self.startProgressBar()
+        self.setLayout(vbox)
+        self.show()
+ 
+    def startProgressBar(self):
+        self.thread = ThreadUpload(self.file) #open new thread with downloader object
         self.thread.signal.connect(self.setProgressVal) 
         #connect the signal from the download thread to update the progress bar
         self.thread.start() #start the thread

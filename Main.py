@@ -21,23 +21,31 @@ if (exists == 0): #if we have not created a google drive StudioHub folder
 else: #We have already created StudioHub folder, its id is the one from searchFile function
         print("StudioHub folder already exists") 
 
+root = tk.Tk() #instantiating tkinter window
+root.withdraw() #Prevents tkinter gui opening
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+
 #Main window that opens when we start the program, 
 #has all the projects and contacts button, create project etc
 class ProjectsWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__()
         project_dict = s.listProjects(folder_id,service)
-       
+        self.setStyleSheet('background-color: darkSlateGray;')
         self.create = QtWidgets.QPushButton(self)
         self.create.setText("Create Project")
+        self.create.setStyleSheet('color: white;')
         self.create.clicked.connect(self.createProj)
 
         self.view = QtWidgets.QPushButton(self)
         self.view.setText("View All Projects")
+        self.view.setStyleSheet('color: white;')
         self.view.clicked.connect(self.projView)
 
         self.contacts = QtWidgets.QPushButton(self)
         self.contacts.setText("Contacts")
+        self.contacts.setStyleSheet('color: white;')
         self.contacts.clicked.connect(self.contactsView)
 
         self.controls = QWidget()  # Controls container widget.
@@ -51,8 +59,8 @@ class ProjectsWindow(QMainWindow):
         for name in project_dict:
             project_id = project_dict[name]
             #print("adding",name, "to widget:", project_id, "ProjectWindow")
-            item = ProjectWidget(name, project_id) #make a project widget with the name of the current project
-            self.controlsLayout.addWidget(item)
+            item = ProjectWidget(name, project_id, self) #make a project widget with the name of the current project
+            self.controlsLayout.addWidget(item) #^^^ we pass self so we can hide it from the widgets inside it
             self.widgets.append(item) #append it to our list of widgets of projects
 
         spacer = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)  
@@ -88,7 +96,7 @@ class ProjectsWindow(QMainWindow):
         container.setLayout(containerLayout)
         self.setCentralWidget(container)
 
-        self.setGeometry(600, 200, 600, 600)
+        self.showMaximized()
         self.setWindowTitle('StudioHub')
 
     def update_display(self, text):
@@ -142,19 +150,25 @@ class ProjectsWindow(QMainWindow):
 
 
 class ProjectWidget(QWidget): 
-    def __init__(self, name, project_id):
+    def __init__(self, name, project_id, win):
         super(ProjectWidget, self).__init__()
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        #we passed in the ProjectWindow, we can hide it when we need to
+        self.win = win
         self.name = name
         self.project_id = project_id
         self.proj = [self.name, self.project_id]
         self.is_on = False
 
         self.lbl = QLabel(self.name)
+        self.lbl.setStyleSheet('color: white;')
         self.btn_upload = QPushButton("Upload to Project")
+        self.btn_upload.setStyleSheet('color: white;')
         self.btn_download = QPushButton("View Project")
+        self.btn_download.setStyleSheet('color: white;')
         self.btn_collab = QPushButton("Make Collaborative")
+        self.btn_collab.setStyleSheet('color: white;')
 
         self.hbox = QHBoxLayout()
         
@@ -201,7 +215,7 @@ class ProjectWidget(QWidget):
 
     def viewProj(self, name):
         print("id is",self.project_id)
-        w.hide() #only works first time around
+        self.win.hide() #hiding the parent project window
         self.FilesWindow = FilesWindow(self.project_id)
         self.FilesWindow.show()
         #here we need to switch to other window
@@ -240,8 +254,11 @@ class viewWidget(QWidget):
         self.is_on = False
         #labelling the buttons and labels
         self.lbl = QLabel(self.name)
+        self.lbl.setStyleSheet('color: white;')
         self.btn_download = QPushButton("Download")
+        self.btn_download.setStyleSheet('color: white;')
         self.btn_delete = QPushButton("Delete")
+        self.btn_delete.setStyleSheet('color: white;')
 
         self.hbox = QHBoxLayout()
         #adding the widgets
@@ -307,19 +324,24 @@ class FilesWindow(QMainWindow):
     def __init__(self, project_id):
         super().__init__()
         thisProj_dict = s.listProjects(project_id,service)
+        self.setStyleSheet('background-color: darkSlateGray;')
         print("FilesWindow loading")
         print("This project_dict", thisProj_dict)
         self.create = QtWidgets.QPushButton(self)
+
         self.create.setText("Create Project")
         self.create.clicked.connect(self.createProj)
+        self.create.setStyleSheet('color: white;')
 
         self.view = QtWidgets.QPushButton(self)
         self.view.setText("View All Projects")
         self.view.clicked.connect(self.projView)
+        self.view.setStyleSheet('color: white;')
 
         self.contacts = QtWidgets.QPushButton(self)
         self.contacts.setText("Contacts")
         self.contacts.clicked.connect(self.contactsView)
+        self.contacts.setStyleSheet('color: white;')
 
         self.controls = QWidget()  # Controls container widget.
         self.controlsLayout = QVBoxLayout()   # Controls container layout.
@@ -371,7 +393,7 @@ class FilesWindow(QMainWindow):
         container.setLayout(containerLayout)
         self.setCentralWidget(container)
 
-        self.setGeometry(600, 200, 600, 600)
+        self.showMaximized()
         self.setWindowTitle('StudioHub')
 
 
@@ -431,9 +453,13 @@ class contactsWidget(QWidget):
         self.is_on = False
         #labelling the buttons and labels
         self.lbl_name = QLabel(self.name)
+        self.lbl_name.setStyleSheet('color: white;')
         self.lbl_email = QLabel(self.user_email)
+        self.lbl_email.setStyleSheet('color: white;')
         self.btn_share = QPushButton("Add to Project")
+        self.btn_share.setStyleSheet('color: white;')
         self.btn_delete = QPushButton("Delete Contact")
+        self.btn_delete.setStyleSheet('color: white;')
 
         self.hbox = QHBoxLayout()
         #adding the widgets
@@ -498,17 +524,21 @@ class ContactsWindow(QMainWindow):
         super().__init__()
         contacts = s.addContact(None, None, None)
         #updates contacts dictionary
+        self.setStyleSheet('background-color: darkSlateGray;')
         self.create = QtWidgets.QPushButton(self)
         self.create.setText("Create Project")
         self.create.clicked.connect(self.createProj)
+        self.create.setStyleSheet('color: white;')
 
         self.view = QtWidgets.QPushButton(self)
         self.view.setText("View All Projects")
         self.view.clicked.connect(self.projView)
+        self.view.setStyleSheet('color: white;')
 
         self.contacts = QtWidgets.QPushButton(self)
         self.contacts.setText("Add New Contact")
         self.contacts.clicked.connect(self.addNew)
+        self.contacts.setStyleSheet('color: white;')
 
         self.controls = QWidget()  # Controls container widget.
         self.controlsLayout = QVBoxLayout()   # Controls container layout.
@@ -557,7 +587,7 @@ class ContactsWindow(QMainWindow):
         container.setLayout(containerLayout)
         self.setCentralWidget(container)
 
-        self.setGeometry(600, 200, 600, 600)
+        self.showMaximized()
         self.setWindowTitle('StudioHub')
 
 
