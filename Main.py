@@ -117,6 +117,7 @@ class ProjectsWindow(QMainWindow):
             q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
             q_box.setWindowTitle("Upload to Project")
             q_box.setText("Would you like to upload a file to this project?")
+            q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
             q_box.exec_()
             if (q_box.result() == QtWidgets.QMessageBox.Yes):
                 loop = True #reacurring loop if we keep cancelling uploads and then say we want to upload
@@ -127,6 +128,7 @@ class ProjectsWindow(QMainWindow):
                         q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
                         q_box.setWindowTitle("Upload to Project")
                         q_box.setText("No file was uploaded, do you want to try again?")
+                        q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
                         q_box.exec_()
                         if (q_box.result() != QtWidgets.QMessageBox.Yes):
                             loop = False
@@ -163,23 +165,31 @@ class ProjectWidget(QWidget):
 
         self.lbl = QLabel(self.name)
         self.lbl.setStyleSheet('color: white;')
+
         self.btn_upload = QPushButton("Upload to Project")
         self.btn_upload.setStyleSheet('color: white;')
-        self.btn_download = QPushButton("View Project")
-        self.btn_download.setStyleSheet('color: white;')
+
+        self.btn_view = QPushButton("View Project")
+        self.btn_view.setStyleSheet('color: white;')
+
         self.btn_collab = QPushButton("Make Collaborative")
         self.btn_collab.setStyleSheet('color: white;')
+
+        self.btn_delete = QPushButton("Delete Project")
+        self.btn_delete.setStyleSheet('color: white;')
 
         self.hbox = QHBoxLayout()
         
         self.hbox.addWidget(self.lbl)
+        self.hbox.addWidget(self.btn_view)
         self.hbox.addWidget(self.btn_upload)
-        self.hbox.addWidget(self.btn_download)
         self.hbox.addWidget(self.btn_collab)
+        self.hbox.addWidget(self.btn_delete)
 
         self.btn_upload.clicked.connect(self.uploadToProj)
-        self.btn_download.clicked.connect(self.viewProj)
+        self.btn_view.clicked.connect(self.viewProj)
         self.btn_collab.clicked.connect(self.collaborateProj)
+        self.btn_delete.clicked.connect(self.deleteProj)
         
         self.setLayout(self.hbox)
 
@@ -202,6 +212,7 @@ class ProjectWidget(QWidget):
                 q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
                 q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
                 q_box.setWindowTitle("Upload to Project")
+                q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
                 q_box.setText("No file was uploaded, do you want to try again?")
                 q_box.exec_()
                 if (q_box.result() != QtWidgets.QMessageBox.Yes):
@@ -210,6 +221,7 @@ class ProjectWidget(QWidget):
                 msg_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
                 msg_box.setWindowTitle("Upload Successful")
                 msg_box.setText("File uploaded to "+self.name)
+                msg_box.setStyleSheet('background-color: darkSlateGray; color: white;')
                 msg_box.exec_()
                 loop = False
 
@@ -233,6 +245,7 @@ class ProjectWidget(QWidget):
                 msg.setText(message)
                 msg.setWindowTitle("Shared Project")
                 msg.setIcon(QMessageBox.Information)
+                msg.setStyleSheet('background-color: darkSlateGray; color: white;')
                 msg.exec_()
             except:
                 message = "Unable to share project with "+(user_email)
@@ -242,7 +255,32 @@ class ProjectWidget(QWidget):
                 message = "Please ensure "+user_email+" is a valid email address"
                 msg.setInformativeText(message)
                 msg.setIcon(QMessageBox.Warning)
+                msg.setStyleSheet('background-color: darkSlateGray; color: white;')
                 msg.exec_()
+
+    def deleteProj(self):
+        try:
+            q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to delete the project
+            q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+            q_box.setWindowTitle("Delete Project")
+            q_box.setText("Are you sure you would like to delete this project?")
+            q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
+            q_box.exec_()
+            if (q_box.result() == QtWidgets.QMessageBox.Yes):#if response is yes, deletes the the project
+                print("Here")
+                s.delete(service, self.project_id)
+                #hide the deleted widget
+                self.win.hide()
+                self.proj = ProjectsWindow() #refresh the window
+                self.proj.show()
+            else:
+                print("User chose not to delete", self.name)
+        except: #if file doesn't exist, must already be deleted
+            error_dialog = QtWidgets.QErrorMessage() #show project already deleted error msg
+            error_dialog.showMessage("Project already deleted")
+            error_dialog.setWindowTitle("File error")
+            error_dialog.setStyleSheet('background-color: darkSlateGray; color: white;')
+            error_dialog.exec_()
             
 
 #viewing the files inside an indiviual project
@@ -291,11 +329,13 @@ class viewWidget(QWidget):
                 q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
                 q_box.setWindowTitle("Download Failed")
                 q_box.setText("Would you like to try and download the file again?")
+                q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
                 q_box.exec_()
                 if (q_box.result() != QtWidgets.QMessageBox.Yes):#if response is not yes, breaks the loop
                     cancel_dialog = QtWidgets.QMessageBox() #let user know they cancelled the download
                     cancel_dialog.setText("The file was not downloaded")
                     cancel_dialog.setWindowTitle("Download Cancelled")
+                    cancel_dialog.setStyleSheet('background-color: darkSlateGray; color: white;')
                     cancel_dialog.exec_() #show the message box
                     return loop == False #breaks loop
 
@@ -305,6 +345,7 @@ class viewWidget(QWidget):
             q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
             q_box.setWindowTitle("Delete File")
             q_box.setText("Are you sure you would like to delete this file?")
+            q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
             q_box.exec_()
             if (q_box.result() == QtWidgets.QMessageBox.Yes):#if response is yes, deletes the file
                 s.delete(service, self.fileProj_id[0])
@@ -316,6 +357,7 @@ class viewWidget(QWidget):
             error_dialog = QtWidgets.QErrorMessage() #show file already deleted error msg
             error_dialog.showMessage("File already deleted")
             error_dialog.setWindowTitle("File error")
+            error_dialog.setStyleSheet('background-color: darkSlateGray; color: white;')
             error_dialog.exec_()
   
 #Window when we view a particular project, has create and contacts buttons 
@@ -325,8 +367,6 @@ class FilesWindow(QMainWindow):
         super().__init__()
         thisProj_dict = s.listProjects(project_id,service)
         self.setStyleSheet('background-color: darkSlateGray;')
-        print("FilesWindow loading")
-        print("This project_dict", thisProj_dict)
         self.create = QtWidgets.QPushButton(self)
 
         self.create.setText("Create Project")
@@ -416,6 +456,7 @@ class FilesWindow(QMainWindow):
             q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
             q_box.setWindowTitle("Upload to Project")
             q_box.setText("Would you like to upload a file to this project?")
+            q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
             q_box.exec_()
             if (q_box.result() == QtWidgets.QMessageBox.Yes):
                 loop = True #reacurring loop if we keep cancelling uploads and then say we want to upload
@@ -426,6 +467,7 @@ class FilesWindow(QMainWindow):
                         q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
                         q_box.setWindowTitle("Upload to Project")
                         q_box.setText("No file was uploaded, do you want to try again?")
+                        q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
                         q_box.exec_()
                         if (q_box.result() != QtWidgets.QMessageBox.Yes):
                             loop = False
@@ -486,7 +528,6 @@ class contactsWidget(QWidget):
         project_name, ok = QInputDialog.getItem(self, "Collaborate","Select a project to share", project_dict, 0, False)
         if ok and project_name:
             project_id = project_dict[project_name]
-            print(project_id)
             print(self.user_email)
             try:
                 s.shareProject(service, project_id, self.user_email)
@@ -494,12 +535,14 @@ class contactsWidget(QWidget):
                 msg = QMessageBox()
                 msg.setText(message)
                 msg.setWindowTitle("Shared Project")
+                msg.setStyleSheet('background-color: darkSlateGray; color: white;')
                 msg.setIcon(QMessageBox.Information)
                 msg.exec_()
             except:
                 message = "Unable to share project with "+(self.user_email)
                 msg = QMessageBox()
                 msg.setText(message)
+                msg.setStyleSheet('background-color: darkSlateGray; color: white;')
                 msg.setWindowTitle("Share Project Error")
                 message = "Please ensure "+self.user_email+" is a valid email address"
                 msg.setInformativeText(message)
@@ -513,6 +556,7 @@ class contactsWidget(QWidget):
         msg = QMessageBox()
         msg.setText(message)
         msg.setWindowTitle("Deleted Contact")
+        msg.setStyleSheet('background-color: darkSlateGray; color: white;')
         msg.setIcon(QMessageBox.Information)
         msg.exec_()
         self.hide()
@@ -610,6 +654,7 @@ class ContactsWindow(QMainWindow):
             q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
             q_box.setWindowTitle("New Project")
             q_box.setText("Would you like to upload a file to this project?")
+            q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
             q_box.exec_()
             if (q_box.result() == QtWidgets.QMessageBox.Yes):
                 loop = True #reacurring loop if we keep cancelling uploads and then say we want to upload
@@ -620,6 +665,7 @@ class ContactsWindow(QMainWindow):
                         q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
                         q_box.setWindowTitle("Upload to Project")
                         q_box.setText("No file was uploaded, do you want to try again?")
+                        q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
                         q_box.exec_()
                         if (q_box.result() != QtWidgets.QMessageBox.Yes):
                             loop = False

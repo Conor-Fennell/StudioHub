@@ -178,8 +178,11 @@ def download(file_id, service):
 #if deleting a project, pass in service, project_id
 #if deleting an individual file, pass service and file_id
 def delete(service, file_id):
-    service.files().delete(fileId=file_id).execute()
-    print("Deleted:", file_id)
+    try:
+        service.files().delete(fileId=file_id).execute()
+        print("Deleted:", file_id)
+    except:
+        print("error deleting file")
              
                     
 #searched through google drive for specific file
@@ -208,7 +211,7 @@ def createFolder(service, name, parent_folder):
                         'parents': [parent_folder]}
         #creates a folder with that metadata 
         file = service.files().create(body=file_metadata, fields='id').execute()
-        print('Folder ID: %s' % file.get('id')) 
+        #print('Folder ID: %s' % file.get('id')) 
         file_id = file.get('id') #get the id of the newly created folder
         return file_id
 
@@ -224,7 +227,7 @@ def listProjects(folder_id,service):
             project_name = file.get('name')
             project_id = file.get('id')
             project_dict[project_name] = project_id
-            print('Found:', project_name,':',project_id)
+            #print('Found:', project_name,':',project_id)
         page_token = response.get('nextPageToken', None)
         if page_token is None:
             break
@@ -316,7 +319,6 @@ class ThreadDownload(QThread):
         done = False
         while done == False:
             status, done = self.downloader.next_chunk()
-            print("status->",status,"done->",done)
             value = int(status.progress() * 100)
             print("Downloaded",value,"%")
             self.signal.emit(value)
@@ -360,7 +362,6 @@ class ThreadUpload(QThread):
         done = False
         while done == False:
             status, done = self.file.next_chunk()
-            print("status->",status, "Done->",done, "object->", self.file.next_chunk())
             if status:
                 value = int(status.progress() * 100)
                 print("Uplaoded",value,"%")
