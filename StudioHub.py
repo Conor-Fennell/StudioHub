@@ -57,10 +57,10 @@ def toDrive(file_name, file_path, folder_id, service, onerror=remove_readonly):
     try:
         file_metadata = {'name': file_name, 'parents': [folder_id]} #Metadata for the file we are going to upload
         media = MediaFileUpload(file_path, mimetype='application/zip',chunksize=CHUNK_SIZE, resumable=True) 
-        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        #progress = progressBarUpload(file) #create instance off progress bar class
-        #progress.exec_() #execute it
-        #progress.hide() #hide it off the screen after
+        request = service.files().create(body=file_metadata, media_body=media, fields='id')
+        progress = progressBarUpload(request) #create instance off progress bar class
+        progress.exec_() #execute it
+        progress.hide() #hide it off the screen after
         print(file_name + " uploaded successfully")
         return 1 #returns 1 if it was successful
     except: 
@@ -288,9 +288,10 @@ def addContact(contact_name, contact_email, contacts, onerror=remove_readonly):
                 #Skipping the first row which is just the headers
                 if (i == 0):
                     i = i+1
+                    print("\n Name, Email")
                 else: #iterate through contacts, adding them to dictonary and printing them
                     contacts[row[0]] = row[1] #contacts['name']['email'] returns email address
-                    print("Name:",row[0],contacts[row[0]])
+                    print("Name:",row[0],"Email:",contacts[row[0]])
     return contacts #return the dictionary
 
 
@@ -302,6 +303,7 @@ def deleteContact(contact_email, onerror=remove_readonly):
                 lines.append(row)
                 for entry in row: #for every entry in the rows of the new list
                     if entry == contact_email: #if an entry == contact email
+                        print(entry, row)
                         lines.remove(row) #remove that row (name,email)
         with open("contacts.csv", "w", newline='') as writeFile: 
             #Overwrite the csv file with all the data besides the deleted contact 
@@ -354,25 +356,28 @@ class progressBarDownload(QDialog):
 
 class ThreadUpload(QThread):
     signal = pyqtSignal(int)
-    def __init__(self, file):
+    def __init__(self, request):
         super(ThreadUpload,self).__init__()
-        self.file = file
+        self.request = request
 
     def run(self):
-        done = False
-        while done == False:
-            status, done = self.file.next_chunk()
+        response = None
+        while response is None:
+            status, response = self.request.next_chunk()
             if status:
                 value = int(status.progress() * 100)
                 print("Uplaoded",value,"%")
                 self.signal.emit(value)
+        #sometimes goes straight from 99% -> Done and freezes, this is a failesafe
+        self.signal.emit(100)
+        print(response)
 
 #define the progress bar upload class, this is the widget with the progress bar on it
 # ive it its dimensions and style etc and instantiate a new progress bar for it
 class progressBarUpload(QDialog):
-    def __init__(self,file):
+    def __init__(self,request):
         super().__init__()
-        self.file = file
+        self.request = request
         self.title = "Uploading"
         self.setWindowTitle(self.title)
         self.setFixedSize(400,60)
@@ -386,7 +391,7 @@ class progressBarUpload(QDialog):
         self.show()
  
     def startProgressBar(self):
-        self.thread = ThreadUpload(self.file) #open new thread with downloader object
+        self.thread = ThreadUpload(self.request) #open new thread with downloader object
         self.thread.signal.connect(self.setProgressVal) 
         #connect the signal from the download thread to update the progress bar
         self.thread.start() #start the thread
