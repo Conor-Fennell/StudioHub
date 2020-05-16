@@ -31,8 +31,8 @@ def remove_readonly(func, path, _):
 #This function is derived from the google drive api documentation
 #It authenticates the user and asks for permission so access their google drive
 def GoogleAuth(creds):
-    if os.path.exists('Library/token.pickle'): #This fail authenticates the user
-        with open('Library/token.pickle', 'rb') as token:
+    if os.path.exists('token.pickle'): #This fail authenticates the user
+        with open('token.pickle', 'rb') as token:
             creds = pickle.load(token)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
@@ -43,7 +43,7 @@ def GoogleAuth(creds):
                 'Library/client_id.json', SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open('Library/token.pickle', 'wb') as token:
+        with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
     #build our drive privelages, use service to access google drive functions
     service = build('drive', 'v3', credentials=creds)
@@ -274,24 +274,24 @@ def addContact(contact_name, contact_email, contacts, onerror=remove_readonly):
        # contacts = {}
 
     contact_info = [contact_name, contact_email] #our new contact information
-    if (not os.path.exists("Library/contacts.csv")): #If file doesn't exist
-        with open('Library/contacts.csv', 'wb', newline='') as file: #wb mode creates the file
+    if (not os.path.exists("contacts.csv")): #If file doesn't exist
+        with open('contacts.csv', 'wb', newline='') as file: #wb mode creates the file
             file.write('Name,EmailAddress') #writes the headers
             print("CSV file created")
     #If we added a new email and name, it means we already created dictionary when program started
     #so we just add the new entries to the csv file and to the dictionary, 
     # no need to create new dictionary from scratch
     if(contact_name and contact_email != None): 
-        with open ("Library/contacts.csv", 'a', newline='') as file:
+        with open ("contacts.csv", 'a', newline='') as file:
             data = csv.writer(file) #open file in write mode
             data.writerow(contact_info) #write new contact to file
-        with open ("Library/contacts.csv", "r", newline='') as file:
+        with open ("contacts.csv", "r", newline='') as file:
             data = csv.reader(file) #open file in reader mode
             contacts[contact_name] = contact_email #add new entry to dictionary
     #We didn't add new contacts, so this is the first time we've opened the file 
     # So we must create the dicitonary from scratch and not just append it       
     if(contacts == None):
-        with open ("Library/contacts.csv", "r", newline='') as file:
+        with open ("contacts.csv", "r", newline='') as file:
             data = csv.reader(file) #open file in reader mode
             contacts = {} #create blank dictionary
             i = 0 #for skipping front row
@@ -308,7 +308,7 @@ def addContact(contact_name, contact_email, contacts, onerror=remove_readonly):
 
 def deleteContact(contact_email, onerror=remove_readonly):
         lines = list() #empty list
-        with open("Library/contacts.csv", "r", newline='') as readFile: #open csv file
+        with open("contacts.csv", "r", newline='') as readFile: #open csv file
             reader = csv.reader(readFile)
             for row in reader: #add all the data from the csv file into the list
                 lines.append(row)
@@ -316,7 +316,7 @@ def deleteContact(contact_email, onerror=remove_readonly):
                     if entry == contact_email: #if an entry == contact email
                         print(entry, row)
                         lines.remove(row) #remove that row (name,email)
-        with open("Library/contacts.csv", "w", newline='') as writeFile: 
+        with open("contacts.csv", "w", newline='') as writeFile: 
             #Overwrite the csv file with all the data besides the deleted contact 
             writer = csv.writer(writeFile)
             writer.writerows(lines)
