@@ -4,13 +4,14 @@ from tkinter import filedialog  # Using this for windows explorer popup
 
 import PyQt5
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtGui import QCursor
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QApplication, QCompleter, QHBoxLayout, QLabel,
                              QLineEdit, QMainWindow, QPushButton, QScrollArea,
                              QSizePolicy, QSpacerItem, QVBoxLayout, QWidget, QMessageBox
                              ,QErrorMessage, QInputDialog, QFormLayout)
 
-import StudioHub as s
+import Drive as s
 
 creds = None
 service = s.GoogleAuth(creds) #authenticate user, make sure permissions are accepted
@@ -28,28 +29,38 @@ class ProjectsWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__()
         #Create our 4 main buttons, the add contacts button will only be visible 
-        #on the contacts screen #242424
-        self.setStyleSheet('background-color: #242424; color: white; font-size: 14pt; font: Courier')
+        #on the contacts screen 
+        self.setStyleSheet('background-color: #242424; color: white; font-size: 14pt;'
+                            'font: Courier;')
         self.create = QtWidgets.QPushButton(self)
         self.create.setText("Create Project")
-        self.create.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
+# padding: 6px;')
+        self.create.setStyleSheet("QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}")
+        self.create.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
         self.create.clicked.connect(self.createProj)
 
         self.view = QtWidgets.QPushButton(self)
         self.view.setText("View All Projects")
-        self.view.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
+        self.view.setStyleSheet("QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
+        self.view.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
         self.view.clicked.connect(self.projView)
 
         self.contacts = QtWidgets.QPushButton(self)
         self.contacts.setText("Contacts")
-        self.contacts.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
+        self.contacts.setStyleSheet("QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
+        self.contacts.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
         self.contacts.clicked.connect(self.contactsView)
 
         #This button is hidden and only made visible on contacts screen
         self.NewContact = QtWidgets.QPushButton(self)
         self.NewContact.setText("Add New Contact")
         self.NewContact.clicked.connect(self.addNew)
-        self.NewContact.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
+        self.NewContact.setStyleSheet("QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
+        self.NewContact.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
         self.NewContact.hide()
 
         self.controls = QWidget()  #Controls container widget.
@@ -100,6 +111,10 @@ class ProjectsWindow(QMainWindow):
 
         # Search bar.
         self.searchbar = QLineEdit()
+        self.searchbar.setStyleSheet('background-color: white; color: black; font: Courier; padding: 6px;'
+                                            'border-style: outset;'
+                                            'border-width: 2px; border-radius: 6px;'
+                                            'border-color: beige;')
         self.searchbar.textChanged.connect(self.update_display)
 
         # Adding Completer.
@@ -163,7 +178,7 @@ class ProjectsWindow(QMainWindow):
             q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
             q_box.setWindowTitle("Upload to Project")
             q_box.setText("Would you like to upload a file to this project?")
-            q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
+            q_box.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
             q_box.exec_()
             if (q_box.result() == QtWidgets.QMessageBox.Yes):
                 loop = True #reacurring loop if we keep cancelling uploads and then say we want to upload
@@ -174,7 +189,7 @@ class ProjectsWindow(QMainWindow):
                         q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
                         q_box.setWindowTitle("Upload to Project")
                         q_box.setText("No file was uploaded, do you want to try again?")
-                        q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
+                        q_box.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
                         q_box.exec_()
                         if (q_box.result() != QtWidgets.QMessageBox.Yes):
                             loop = False
@@ -184,7 +199,7 @@ class ProjectsWindow(QMainWindow):
                         msg_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
                         msg_box.setWindowTitle("Upload Successful")
                         msg_box.setText("File uploaded to "+project_name)
-                        msg_box.setStyleSheet('background-color: darkSlateGray; color: white;')
+                        msg_box.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
                         msg_box.exec_()
                         loop = False
         for widget in self.contWidget:
@@ -262,7 +277,7 @@ class ProjectsWindow(QMainWindow):
                     msg_box = QtWidgets.QMessageBox(self)
                     msg_box.setWindowTitle("New Contact Error")
                     msg_box.setText("Contact name and email address can't be the same")
-                    msg_box.setStyleSheet('background-color: darkSlateGray; color: white;')
+                    msg_box.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
                     msg_box.exec_() #they cant be the same, ask them to enter new details
             else: #break from loop as we chose not to add a new contact
                 loop = False
@@ -282,19 +297,31 @@ class ProjectWidget(QWidget):
         self.is_on = False
 
         self.lbl = QLabel(self.name)
-        self.lbl.setStyleSheet('color: white;')
+        self.lbl.setStyleSheet('background-color: #242424; color: white; font-size: 14pt;font: Courier;')
 
         self.btn_upload = QPushButton("Upload to Project")
-        self.btn_upload.setStyleSheet('color: white;')
+        self.btn_upload.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+        self.btn_upload.setStyleSheet(
+                                "QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
 
         self.btn_view = QPushButton("View Project")
-        self.btn_view.setStyleSheet('color: white;')
+        self.btn_view.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+        self.btn_view.setStyleSheet(
+                                "QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
 
         self.btn_collab = QPushButton("Make Collaborative")
-        self.btn_collab.setStyleSheet('color: white;')
+        self.btn_collab.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+        self.btn_collab.setStyleSheet(
+                                "QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
 
         self.btn_delete = QPushButton("Delete Project")
-        self.btn_delete.setStyleSheet('color: white;')
+        self.btn_delete.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+        self.btn_delete.setStyleSheet(
+                                "QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
 
         self.hbox = QHBoxLayout()
         
@@ -330,7 +357,7 @@ class ProjectWidget(QWidget):
                 q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
                 q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
                 q_box.setWindowTitle("Upload to Project")
-                q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
+                q_box.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
                 q_box.setText("No file was uploaded, do you want to try again?")
                 q_box.exec_()
                 if (q_box.result() != QtWidgets.QMessageBox.Yes):
@@ -339,7 +366,7 @@ class ProjectWidget(QWidget):
                 msg_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to upload to the project
                 msg_box.setWindowTitle("Upload Successful")
                 msg_box.setText("File uploaded to "+self.name)
-                msg_box.setStyleSheet('background-color: darkSlateGray; color: white;')
+                msg_box.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
                 msg_box.exec_()
                 loop = False
         self.win.currentWindow = self.win.projWidget
@@ -376,7 +403,7 @@ class ProjectWidget(QWidget):
                 msg.setText(message)
                 msg.setWindowTitle("Shared Project")
                 msg.setIcon(QMessageBox.Information)
-                msg.setStyleSheet('background-color: darkSlateGray; color: white;')
+                msg.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
                 msg.exec_()
             except:
                 message = "Unable to share project with "+(user_email)
@@ -386,7 +413,7 @@ class ProjectWidget(QWidget):
                 message = "Please ensure "+user_email+" is a valid email address"
                 msg.setInformativeText(message)
                 msg.setIcon(QMessageBox.Warning)
-                msg.setStyleSheet('background-color: darkSlateGray; color: white;')
+                msg.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
                 msg.exec_()
 
     def deleteProj(self):
@@ -395,7 +422,8 @@ class ProjectWidget(QWidget):
             q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
             q_box.setWindowTitle("Delete Project")
             q_box.setText("Are you sure you would like to delete this project?")
-            q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
+            q_box.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
+            q_box.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
             q_box.exec_()
             if (q_box.result() == QtWidgets.QMessageBox.Yes):#if response is yes, deletes the the project
                 s.delete(service, self.project_id)
@@ -408,7 +436,7 @@ class ProjectWidget(QWidget):
             error_dialog = QtWidgets.QErrorMessage() #show project already deleted error msg
             error_dialog.showMessage("Project already deleted")
             error_dialog.setWindowTitle("File error")
-            error_dialog.setStyleSheet('background-color: darkSlateGray; color: white;')
+            error_dialog.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
             error_dialog.exec_()
 
 
@@ -423,13 +451,19 @@ class contactsWidget(QWidget):
         self.is_on = False
         #labelling the buttons and labels
         self.lbl_name = QLabel(self.name)
-        self.lbl_name.setStyleSheet('color: white;')
+        self.lbl_name.setStyleSheet('background-color: #242424; color: white; font-size: 14pt;font: Courier;')
         self.lbl_email = QLabel(self.user_email)
-        self.lbl_email.setStyleSheet('color: white;')
+        self.lbl_email.setStyleSheet('background-color: #242424; color: white; font-size: 14pt;font: Courier;')
         self.btn_share = QPushButton("Add to Project")
-        self.btn_share.setStyleSheet('color: white;')
+        self.btn_share.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+        self.btn_share.setStyleSheet(
+                                "QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
         self.btn_delete = QPushButton("Delete Contact")
-        self.btn_delete.setStyleSheet('color: white;')
+        self.btn_delete.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+        self.btn_delete.setStyleSheet(
+                                "QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
 
         self.hbox = QHBoxLayout()
         #adding the widgets
@@ -463,14 +497,14 @@ class contactsWidget(QWidget):
                 msg = QMessageBox()
                 msg.setText(message)
                 msg.setWindowTitle("Shared Project")
-                msg.setStyleSheet('background-color: darkSlateGray; color: white;')
+                msg.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
                 msg.setIcon(QMessageBox.Information)
                 msg.exec_()
             except:
                 message = "Unable to share project with "+(self.user_email)
                 msg = QMessageBox()
                 msg.setText(message)
-                msg.setStyleSheet('background-color: darkSlateGray; color: white;')
+                msg.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
                 msg.setWindowTitle("Share Project Error")
                 message = "Please ensure "+self.user_email+" is a valid email address"
                 msg.setInformativeText(message)
@@ -484,7 +518,7 @@ class contactsWidget(QWidget):
         msg = QMessageBox()
         msg.setText(message)
         msg.setWindowTitle("Deleted Contact")
-        msg.setStyleSheet('background-color: darkSlateGray; color: white;')
+        msg.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
         msg.setIcon(QMessageBox.Information)
         msg.exec_()
         #self.hide()
@@ -515,11 +549,17 @@ class viewWidget(QWidget):
         self.is_on = False
         #labelling the buttons and labels
         self.lbl = QLabel(self.name)
-        self.lbl.setStyleSheet('color: white;')
+        self.lbl.setStyleSheet('background-color: #242424; color: white; font-size: 14pt;font: Courier;')
         self.btn_download = QPushButton("Download")
-        self.btn_download.setStyleSheet('color: white;')
+        self.btn_download.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+        self.btn_download.setStyleSheet(
+                                "QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
         self.btn_delete = QPushButton("Delete")
-        self.btn_delete.setStyleSheet('color: white;')
+        self.btn_delete.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
+        self.btn_delete.setStyleSheet(
+                                "QPushButton{background-color : darkSlateGray;}"
+                                "QPushButton::pressed{background-color : #242424;}") 
 
         self.hbox = QHBoxLayout()
         #adding the widgets
@@ -541,26 +581,35 @@ class viewWidget(QWidget):
             w.setVisible(False)
             
     def down(self, fileProj_id):
-        loop = True
-        while loop == True:
-            print("Downloading file with id:",self.fileProj_id[0])
-            success = s.download(self.fileProj_id[0], service) #download the file from the drive
-            if success:
-                return loop == False
-            else:
-                q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to delete file
-                q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
-                q_box.setWindowTitle("Download Failed")
-                q_box.setText("Would you like to try and download the file again?")
-                q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
-                q_box.exec_()
-                if (q_box.result() != QtWidgets.QMessageBox.Yes):#if response is not yes, breaks the loop
-                    cancel_dialog = QtWidgets.QMessageBox() #let user know they cancelled the download
-                    cancel_dialog.setText("The file was not downloaded")
-                    cancel_dialog.setWindowTitle("Download Cancelled")
-                    cancel_dialog.setStyleSheet('background-color: darkSlateGray; color: white;')
-                    cancel_dialog.exec_() #show the message box
-                    return loop == False #breaks loop
+        try:
+            loop = True
+            while loop == True:
+                print("Downloading file with id:",self.fileProj_id[0])
+                success = s.download(self.fileProj_id[0], service) #download the file from the drive
+                if success:
+                    return loop == False
+                else:
+                    q_box = QtWidgets.QMessageBox(self) #create a message box asking do you want to delete file
+                    q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+                    q_box.setWindowTitle("Download Failed")
+                    q_box.setText("Would you like to try and download the file again?")
+                    q_box.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
+                    q_box.exec_()
+                    if (q_box.result() != QtWidgets.QMessageBox.Yes):#if response is not yes, breaks the loop
+                        cancel_dialog = QtWidgets.QMessageBox() #let user know they cancelled the download
+                        cancel_dialog.setText("The file was not downloaded")
+                        cancel_dialog.setWindowTitle("Download Cancelled")
+                        cancel_dialog.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
+                        cancel_dialog.exec_() #show the message box
+                        return loop == False #breaks loop
+        except:
+            cancel_dialog = QtWidgets.QMessageBox() #let user know they cancelled the download
+            cancel_dialog.setText("The file was not downloaded")
+            cancel_dialog.setWindowTitle("Download Cancelled")
+            cancel_dialog.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
+            cancel_dialog.exec_() #show the message box
+         
+
 
     def delete(self, fileProj_id): 
         try:
@@ -568,7 +617,7 @@ class viewWidget(QWidget):
             q_box.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
             q_box.setWindowTitle("Delete File")
             q_box.setText("Are you sure you would like to delete this file?")
-            q_box.setStyleSheet('background-color: darkSlateGray; color: white;')
+            q_box.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
             q_box.exec_()
             if (q_box.result() == QtWidgets.QMessageBox.Yes):#if response is yes, deletes the file
                 s.delete(service, self.fileProj_id[0])
@@ -580,9 +629,8 @@ class viewWidget(QWidget):
             error_dialog = QtWidgets.QErrorMessage() #show file already deleted error msg
             error_dialog.showMessage("File already deleted")
             error_dialog.setWindowTitle("File error")
-            error_dialog.setStyleSheet('background-color: darkSlateGray; color: white;')
+            error_dialog.setStyleSheet('background-color: darkSlateGray; color: white; font: Courier')
             error_dialog.exec_()
-
 
 #Initilisation of the GUI
 app = QApplication(sys.argv)
